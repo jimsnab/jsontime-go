@@ -11,31 +11,88 @@ type (
 	timeStruct struct {
 		When time.Time `json:"when"`
 	}
+
+	secStruct struct {
+		When SecRes `json:"when"`
+	}
+
+	msStruct struct {
+		When MsRes `json:"when"`
+	}
+
+	usStruct struct {
+		When UsRes `json:"when"`
+	}
+
+	nsStruct struct {
+		When NsRes `json:"when"`
+	}
+
+	formType int
 )
 
-func testVerifyTime(t *testing.T, testData string, expected time.Time) {
-	raw := fmt.Sprintf(`{"when":"%s"}`, testData)
+const (
+	formRegular formType = iota
+	formSec
+	formMs
+	formUs
+	formNs
+)
 
-	var ts timeStruct
-	if err := json.Unmarshal([]byte(raw), &ts); err != nil {
-		t.Fatal(err)
+func testVerifyTime(t *testing.T, parseTime, renderTime string, ft formType) {
+	tt, err := time.Parse(time.RFC3339Nano, renderTime)
+	if err != nil {
+		panic("bad test input")
 	}
 
-	if !ts.When.Equal(expected) {
-		t.Errorf("timestamp %s is not the expected time %s", testData, expected.Format(time.RFC3339))
+	raw := fmt.Sprintf(`{"when":"%s"}`, parseTime)
+
+	var parsed time.Time
+	var rendered []byte
+	var parseErr, renderErr error
+	switch ft {
+	case formRegular:
+		var ts timeStruct
+		parseErr = json.Unmarshal([]byte(raw), &ts)
+		parsed = ts.When
+	case formSec:
+		var ts secStruct
+		parseErr = json.Unmarshal([]byte(raw), &ts)
+		parsed = ts.When.Time
+		rendered, renderErr = json.Marshal(ts)
+	case formMs:
+		var ts msStruct
+		parseErr = json.Unmarshal([]byte(raw), &ts)
+		parsed = ts.When.Time
+		rendered, renderErr = json.Marshal(ts)
+	case formUs:
+		var ts usStruct
+		parseErr = json.Unmarshal([]byte(raw), &ts)
+		parsed = ts.When.Time
+		rendered, renderErr = json.Marshal(ts)
+	case formNs:
+		var ts nsStruct
+		parseErr = json.Unmarshal([]byte(raw), &ts)
+		parsed = ts.When.Time
+		rendered, renderErr = json.Marshal(ts)
 	}
-}
 
-func testVerifyNotTime(t *testing.T, testData string, notExpected time.Time) {
-	raw := fmt.Sprintf(`{"when":"%s"}`, testData)
-
-	var ts timeStruct
-	if err := json.Unmarshal([]byte(raw), &ts); err != nil {
-		t.Fatal(err)
+	if parseErr != nil {
+		t.Fatal(parseErr)
+	}
+	if renderErr != nil {
+		t.Fatal(renderErr)
 	}
 
-	if ts.When.Equal(notExpected) {
-		t.Errorf("timestamp %s matchines wrong time %s", testData, notExpected.Format(time.RFC3339))
+	if !parsed.Equal(tt) {
+		t.Errorf("timestamp %s is not the expected time %s", parseTime, tt.Format(time.RFC3339))
+	}
+
+	if rendered != nil {
+		expected := fmt.Sprintf(`{"when":"%s"}`, renderTime)
+		if string(rendered) != expected {
+			t.Errorf("timestamp %s was rendered as %s, not %s", parseTime, string(rendered), expected)
+		}
 	}
 }
 
@@ -49,31 +106,47 @@ func testVerifyTimeParseErr(t *testing.T, testData string) {
 }
 
 func TestJsonTime(t *testing.T) {
-	refTime, err := time.Parse(time.RFC3339Nano, "2024-07-22T15:05:52.338001000Z")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testVerifyTime(t, "2024-07-22T15:05:52.338001Z", refTime)
-	testVerifyNotTime(t, "2024-07-22T15:05:52.338Z", refTime)
-	testVerifyNotTime(t, "2024-07-22T15:05:52Z", refTime)
+	testVerifyTime(t, "2024-07-22T15:05:52.338001008Z", "2024-07-22T15:05:52.338001008Z", formRegular)
+	testVerifyTime(t, "2024-07-22T15:05:52.338001Z", "2024-07-22T15:05:52.338001Z", formRegular)
+	testVerifyTime(t, "2024-07-22T15:05:52.338Z", "2024-07-22T15:05:52.338Z", formRegular)
+	testVerifyTime(t, "2024-07-22T15:05:52Z", "2024-07-22T15:05:52Z", formRegular)
+}
 
-	refTime, err = time.Parse(time.RFC3339Nano, "2024-07-22T15:05:52.338000000Z")
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestSecRes(t *testing.T) {
+	testVerifyTime(t, "2024-07-22T15:05:52.338001008Z", "2024-07-22T15:05:52Z", formSec)
+	testVerifyTime(t, "2024-07-22T15:05:52.338001Z", "2024-07-22T15:05:52Z", formSec)
+	testVerifyTime(t, "2024-07-22T15:05:52.338Z", "2024-07-22T15:05:52Z", formSec)
+	testVerifyTime(t, "2024-07-22T15:05:52Z", "2024-07-22T15:05:52Z", formSec)
 
-	testVerifyTime(t, "2024-07-22T15:05:52.338000Z", refTime)
-	testVerifyTime(t, "2024-07-22T15:05:52.338Z", refTime)
-	testVerifyNotTime(t, "2024-07-22T15:05:52Z", refTime)
+	testVerifyTime(t, "2024-07-22T15:05:52.838001008Z", "2024-07-22T15:05:53Z", formSec)
+	testVerifyTime(t, "2024-07-22T15:05:52.838001Z", "2024-07-22T15:05:53Z", formSec)
+	testVerifyTime(t, "2024-07-22T15:05:52.838Z", "2024-07-22T15:05:53Z", formSec)
+}
 
-	refTime, err = time.Parse(time.RFC3339Nano, "2024-07-22T15:05:52.000000000Z")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testVerifyTime(t, "2024-07-22T15:05:52Z", refTime)
-	testVerifyTime(t, "2024-07-22T15:05:52.000Z", refTime)
-	testVerifyTime(t, "2024-07-22T15:05:52.000000Z", refTime)
+func TestMsRes(t *testing.T) {
+	testVerifyTime(t, "2024-07-22T15:05:52.338001008Z", "2024-07-22T15:05:52.338Z", formMs)
+	testVerifyTime(t, "2024-07-22T15:05:52.338001Z", "2024-07-22T15:05:52.338Z", formMs)
+	testVerifyTime(t, "2024-07-22T15:05:52.338Z", "2024-07-22T15:05:52.338Z", formMs)
+	testVerifyTime(t, "2024-07-22T15:05:52Z", "2024-07-22T15:05:52.000Z", formMs)
 
+	testVerifyTime(t, "2024-07-22T15:05:52.338500008Z", "2024-07-22T15:05:52.339Z", formMs)
+	testVerifyTime(t, "2024-07-22T15:05:52.338500Z", "2024-07-22T15:05:52.339Z", formMs)
+}
+
+func TestUsRes(t *testing.T) {
+	testVerifyTime(t, "2024-07-22T15:05:52.338001008Z", "2024-07-22T15:05:52.338001Z", formUs)
+	testVerifyTime(t, "2024-07-22T15:05:52.338001Z", "2024-07-22T15:05:52.338001Z", formUs)
+	testVerifyTime(t, "2024-07-22T15:05:52.338Z", "2024-07-22T15:05:52.338000Z", formUs)
+	testVerifyTime(t, "2024-07-22T15:05:52Z", "2024-07-22T15:05:52.000000Z", formUs)
+
+	testVerifyTime(t, "2024-07-22T15:05:52.338001508Z", "2024-07-22T15:05:52.338002Z", formUs)
+}
+
+func TestNsRes(t *testing.T) {
+	testVerifyTime(t, "2024-07-22T15:05:52.338001008Z", "2024-07-22T15:05:52.338001008Z", formNs)
+	testVerifyTime(t, "2024-07-22T15:05:52.338001Z", "2024-07-22T15:05:52.338001000Z", formNs)
+	testVerifyTime(t, "2024-07-22T15:05:52.338Z", "2024-07-22T15:05:52.338000000Z", formNs)
+	testVerifyTime(t, "2024-07-22T15:05:52Z", "2024-07-22T15:05:52.000000000Z", formNs)
 }
 
 func TestJsonTimeMalformed(t *testing.T) {

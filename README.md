@@ -1,36 +1,34 @@
-# Ordered-Data
+# JSON-Time
 
-This simple library implements an ordered map that has:
+This simple library implements a Time that supports multiple JSON rendering
+forms to preserve time resolution.
 
-* JSON marshal/unmarshal to preserve JSON ordering
-* `MustGet*` convenience functions that do some basic type conversions,
-  particularly useful when working with JSON data
-* Map value extraction
-* Replace
-* Multi-key removal
-* Clone
-* Stringify
+Use the standard time.Time if the exact resolution of time is not critical.
+If it doesn't matter whether the JSON timestamp is in seconds, milliseconds,
+microseconds or nanoseconds resolution, the standard library will suffice.
 
-## Interfaces
+If you need to maintain a specific resolution, use JSON-Time. This library
+provides different types that match the desired resolution:
 
-`OrderedMap[K comparable, V any]` is a general-purpose ordered map. Create an
-ordered map with `NewOrderedMap()` or `NewOrderedMapN()`. Then use its
-`Set()` function to assign a value, and `Get()` to retrieve a value. The
-rest of the functions in the interface are fairly self-explainitory.
+* `jsontime.SecRes` for second resolution
+* `jsontime.MsRes` for millisecond resolution
+* `jsontime.UsRes` for microsecond resolution
+* `jsontime.NsRes` for nanosecond resolution
 
-`StringMap` is a convenience alias for `OrderedMap[string, any]`. Create a
-string map with `NewStringMap()` or `NewStringMapN()`
+## Parsing
 
-## Unmarshaling
+When unmarshalling JSON, the input string can have any resolution. The parsed
+time will be rounded to the resolution of the `jsontime` type.
 
-To unmarshal an interface in Go, you must first initialize what the interface
-points to, and then `json.Unmarshal` will fill it.
+For example, consider the timestamp `"2024-07-22T15:05:52.999999999Z"`. This
+will result in the following values:
 
-Example:
-```go
-	m := NewOrderedMap[string, any]()
-	if err := json.Unmarshal(orderedJson1Json, &m); err != nil {
-		panic(err)
-	}
-```
+* `jsontime.SecRes` produces `"2024-07-22T15:05:53Z"`
+* `jsontime.MsRes` produces `"2024-07-22T15:05:53.000Z"`
+* `jsontime.UsRes` produces `"2024-07-22T15:05:53.000000Z"`
+* `jsontime.NsRes` produces `"2024-07-22T15:05:52.999999999Z"`
 
+## Rendering
+
+When marshalling JSON, the output string will have the exact resolution of the
+`jsontime` type, regardless of the original format.

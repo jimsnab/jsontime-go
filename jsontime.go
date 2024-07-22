@@ -7,15 +7,19 @@ import (
 )
 
 type (
-	JsonTimeSec struct {
+	SecRes struct {
 		time.Time
 	}
 
-	JsonTimeMs struct {
+	MsRes struct {
 		time.Time
 	}
 
-	JsonTimeUs struct {
+	UsRes struct {
+		time.Time
+	}
+
+	NsRes struct {
 		time.Time
 	}
 )
@@ -36,7 +40,7 @@ func parseJsonTime(str string) (t time.Time, err error) {
 	return
 }
 
-func (sec JsonTimeSec) MarshalJSON() ([]byte, error) {
+func (sec SecRes) MarshalJSON() ([]byte, error) {
 	str := `""`
 	if !sec.IsZero() {
 		str = fmt.Sprintf(`"%s"`, sec.Format("2006-01-02T15:04:05Z"))
@@ -44,7 +48,7 @@ func (sec JsonTimeSec) MarshalJSON() ([]byte, error) {
 	return []byte(str), nil
 }
 
-func (sec *JsonTimeSec) UnmarshalJSON(text []byte) error {
+func (sec *SecRes) UnmarshalJSON(text []byte) error {
 	if len(text) == 2 {
 		return nil
 	}
@@ -56,11 +60,12 @@ func (sec *JsonTimeSec) UnmarshalJSON(text []byte) error {
 	if err != nil {
 		return err
 	}
+	t = t.Add(time.Millisecond * 500)
 	sec.Time = time.Unix(t.Unix(), 0).UTC()
 	return nil
 }
 
-func (ms JsonTimeMs) MarshalJSON() ([]byte, error) {
+func (ms MsRes) MarshalJSON() ([]byte, error) {
 	str := `""`
 	if !ms.IsZero() {
 		str = fmt.Sprintf(`"%s"`, ms.Format("2006-01-02T15:04:05.000Z"))
@@ -68,7 +73,7 @@ func (ms JsonTimeMs) MarshalJSON() ([]byte, error) {
 	return []byte(str), nil
 }
 
-func (ms *JsonTimeMs) UnmarshalJSON(text []byte) error {
+func (ms *MsRes) UnmarshalJSON(text []byte) error {
 	if len(text) == 2 {
 		return nil
 	}
@@ -76,12 +81,13 @@ func (ms *JsonTimeMs) UnmarshalJSON(text []byte) error {
 	if err != nil {
 		return err
 	}
+	t = t.Add(time.Microsecond * 500)
 	n := t.UnixMilli()
 	ms.Time = time.Unix(n/1000, (n%1000)*1000000).UTC()
 	return nil
 }
 
-func (us JsonTimeUs) MarshalJSON() ([]byte, error) {
+func (us UsRes) MarshalJSON() ([]byte, error) {
 	str := `""`
 	if !us.IsZero() {
 		str = fmt.Sprintf(`"%s"`, us.Format("2006-01-02T15:04:05.000000Z"))
@@ -89,7 +95,7 @@ func (us JsonTimeUs) MarshalJSON() ([]byte, error) {
 	return []byte(str), nil
 }
 
-func (us *JsonTimeUs) UnmarshalJSON(text []byte) error {
+func (us *UsRes) UnmarshalJSON(text []byte) error {
 	if len(text) == 2 {
 		return nil
 	}
@@ -97,7 +103,28 @@ func (us *JsonTimeUs) UnmarshalJSON(text []byte) error {
 	if err != nil {
 		return err
 	}
+	t = t.Add(time.Nanosecond * 500)
 	n := t.UnixMicro()
 	us.Time = time.Unix(n/1000000, (n%1000000)*1000).UTC()
+	return nil
+}
+
+func (us NsRes) MarshalJSON() ([]byte, error) {
+	str := `""`
+	if !us.IsZero() {
+		str = fmt.Sprintf(`"%s"`, us.Format("2006-01-02T15:04:05.000000000Z"))
+	}
+	return []byte(str), nil
+}
+
+func (ns *NsRes) UnmarshalJSON(text []byte) error {
+	if len(text) == 2 {
+		return nil
+	}
+	t, err := parseJsonTime(string(text))
+	if err != nil {
+		return err
+	}
+	ns.Time = t
 	return nil
 }
