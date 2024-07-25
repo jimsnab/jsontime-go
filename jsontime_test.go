@@ -152,3 +152,25 @@ func TestNsRes(t *testing.T) {
 func TestJsonTimeMalformed(t *testing.T) {
 	testVerifyTimeParseErr(t, "2024-07-22T15:05:52.33800!Z")
 }
+
+func TestNow(t *testing.T) {
+	sr := SecResNow()
+	msr := MsResNow()
+	usr := UsResNow()
+	nsr := NsResNow()
+
+	d := nsr.Sub(sr.Time)
+	if d.Abs().Seconds() > 1 {
+		t.Error("sr fail")
+	}
+
+	d = nsr.Sub(msr.Time)
+	if d.Abs().Seconds() > 1 {
+		t.Error("msr fail")
+	}
+
+	d = nsr.Sub(usr.Time)
+	if d.Abs().Seconds() > 1 {
+		t.Error("usr fail")
+	}
+}

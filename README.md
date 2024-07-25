@@ -32,3 +32,12 @@ will result in the following values:
 
 When marshalling JSON, the output string will have the exact resolution of the
 `jsontime` type, regardless of the original format.
+
+## Utilities
+
+The following functions return the current time with the respective type:
+
+* `jsontime.SecResNow()`
+* `jsontime.MsResNow()`
+* `jsontime.UsResNow()`
+* `jsontime.NsResNow()`
