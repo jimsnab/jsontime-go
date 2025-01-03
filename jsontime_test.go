@@ -174,3 +174,65 @@ func TestNow(t *testing.T) {
 		t.Error("usr fail")
 	}
 }
+
+func TestOmitemptyAllTypes(t *testing.T) {
+
+	// Go custom marshaler interface has a defect. It does not let us omitempty when the object value IsZero() is true.
+	// That's because Time is a struct, not an interface, and the encode.go doesn't consider struct might implement
+	// type interface { IsZero() bool }.
+	//
+	// This test proves the case.
+
+	// Struct with all time types and omitempty annotations
+	type OmitEmptyStruct struct {
+		SecField  *SecRes `json:"sec_field,omitempty"`
+		MsField   *MsRes  `json:"ms_field,omitempty"`
+		UsField   *UsRes  `json:"us_field,omitempty"`
+		NsField   *NsRes  `json:"ns_field,omitempty"`
+		SecField2 SecRes  `json:"sec_field2,omitempty"`
+		MsField2  MsRes   `json:"ms_field2,omitempty"`
+		UsField2  UsRes   `json:"us_field2,omitempty"`
+		NsField2  NsRes   `json:"ns_field2,omitempty"`
+	}
+
+	// Test with all zero values
+	zeroStruct := OmitEmptyStruct{}
+	zeroJSON, err := json.Marshal(zeroStruct)
+	if err != nil {
+		t.Fatalf("Failed to marshal zero value struct: %v", err)
+	}
+	expectedZeroJSON := `{"sec_field2":"","ms_field2":"","us_field2":"","ns_field2":""}`
+	if string(zeroJSON) != expectedZeroJSON {
+		t.Errorf("Expected JSON %s, got %s", expectedZeroJSON, string(zeroJSON))
+	}
+
+	// Test with non-zero values for all fields
+	nonZeroStruct := OmitEmptyStruct{
+		SecField: &SecRes{Time: time.Date(2024, 7, 22, 15, 5, 52, 0, time.UTC)},
+		MsField:  &MsRes{Time: time.Date(2024, 7, 22, 15, 5, 52, 338000000, time.UTC)},
+		UsField:  &UsRes{Time: time.Date(2024, 7, 22, 15, 5, 52, 338001000, time.UTC)},
+		NsField:  &NsRes{Time: time.Date(2024, 7, 22, 15, 5, 52, 338001008, time.UTC)},
+	}
+	nonZeroJSON, err := json.Marshal(nonZeroStruct)
+	if err != nil {
+		t.Fatalf("Failed to marshal non-zero value struct: %v", err)
+	}
+	expectedNonZeroJSON := `{"sec_field":"2024-07-22T15:05:52Z","ms_field":"2024-07-22T15:05:52.338Z","us_field":"2024-07-22T15:05:52.338001Z","ns_field":"2024-07-22T15:05:52.338001008Z","sec_field2":"","ms_field2":"","us_field2":"","ns_field2":""}`
+	if string(nonZeroJSON) != expectedNonZeroJSON {
+		t.Errorf("Expected JSON %s, got %s", expectedNonZeroJSON, string(nonZeroJSON))
+	}
+
+	// Test with mixed zero and non-zero values
+	mixedStruct := OmitEmptyStruct{
+		SecField: &SecRes{Time: time.Date(2024, 7, 22, 15, 5, 52, 0, time.UTC)},
+		UsField:  &UsRes{Time: time.Date(2024, 7, 22, 15, 5, 52, 338001000, time.UTC)},
+	}
+	mixedJSON, err := json.Marshal(mixedStruct)
+	if err != nil {
+		t.Fatalf("Failed to marshal mixed value struct: %v", err)
+	}
+	expectedMixedJSON := `{"sec_field":"2024-07-22T15:05:52Z","us_field":"2024-07-22T15:05:52.338001Z","sec_field2":"","ms_field2":"","us_field2":"","ns_field2":""}`
+	if string(mixedJSON) != expectedMixedJSON {
+		t.Errorf("Expected JSON %s, got %s", expectedMixedJSON, string(mixedJSON))
+	}
+}
